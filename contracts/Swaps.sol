@@ -19,10 +19,10 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
     mapping (bytes32 => uint) public expirationTimestamps;
     mapping (bytes32 => bool) public isSwapped;
     mapping (bytes32 => bool) public isCancelled;
-    mapping (bytes32 => mapping (address => uint)) public limits;
-    mapping (bytes32 => mapping (address => uint)) public raised;
-    mapping (bytes32 => mapping (address => address[])) public investors;
-    mapping (bytes32 => mapping (address => mapping (address => uint))) public investments;
+    mapping (bytes32 => mapping (address => uint)) internal limits;
+    mapping (bytes32 => mapping (address => uint)) internal raised;
+    mapping (bytes32 => mapping (address => address[])) internal investors;
+    mapping (bytes32 => mapping (address => mapping (address => uint))) internal investments;
 
     modifier onlyInvestor(bytes32 _id, address _token) {
         require(_isInvestor(_id, _token, msg.sender), "Allowed only for investors");
@@ -190,15 +190,91 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         vault = _vault;
     }
 
-    function isFilled(bytes32 _id, address _token) public view returns (bool) {
-        return raised[_id][_token] == limits[_id][_token];
+    function baseLimit(bytes32 _id)
+        public
+        view
+        returns (uint)
+    {
+        return limits[_id][baseAddresses[_id]];
+    }
+
+    function quoteLimit(bytes32 _id)
+        public
+        view
+        returns (uint)
+    {
+        return limits[_id][quoteAddresses[_id]];
+    }
+
+    function baseRaised(bytes32 _id)
+        public
+        view
+        returns (uint)
+    {
+        return raised[_id][baseAddresses[_id]];
+    }
+
+    function quoteRaised(bytes32 _id)
+        public
+        view
+        returns (uint)
+    {
+        return raised[_id][quoteAddresses[_id]];
+    }
+
+    function isBaseFilled(bytes32 _id)
+        public
+        view
+        returns (bool)
+    {
+        return raised[_id][baseAddresses[_id]] == limits[_id][baseAddresses[_id]];
+    }
+
+    function isQuoteFilled(bytes32 _id)
+        public
+        view
+        returns (bool)
+    {
+        return raised[_id][quoteAddresses[_id]] == limits[_id][quoteAddresses[_id]];
+    }
+
+    function baseInvestors(bytes32 _id)
+        public
+        view
+        returns (address[] memory)
+    {
+        return investors[_id][baseAddresses[_id]];
+    }
+
+    function quoteInvestors(bytes32 _id)
+        public
+        view
+        returns (address[] memory)
+    {
+        return investors[_id][quoteAddresses[_id]];
+    }
+
+    function baseUserInvestment(bytes32 _id, address _user)
+        public
+        view
+        returns (uint)
+    {
+        return investments[_id][baseAddresses[_id]][_user];
+    }
+
+    function quoteUserInvestment(bytes32 _id, address _user)
+        public
+        view
+        returns (uint)
+    {
+        return investments[_id][quoteAddresses[_id]][_user];
     }
 
     function _swap(bytes32 _id) internal {
         require(!isSwapped[_id], "Already swapped");
         require(!isCancelled[_id], "Already cancelled");
-        require(isFilled(_id, baseAddresses[_id]), "Base tokens not filled");
-        require(isFilled(_id, quoteAddresses[_id]), "Quote tokens not filled");
+        require(isBaseFilled(_id), "Base tokens not filled");
+        require(isQuoteFilled(_id), "Quote tokens not filled");
         require(now <= expirationTimestamps[_id], "Contract expired");
 
         _distribute(_id, baseAddresses[_id], quoteAddresses[_id]);
@@ -278,7 +354,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
             investments[_id][_token][_from]
         );
 
-        if (isFilled(_id, baseAddresses[_id]) && isFilled(_id, quoteAddresses[_id])) {
+        if (isBaseFilled(_id) && isQuoteFilled(_id)) {
             _swap(_id);
         }
     }
