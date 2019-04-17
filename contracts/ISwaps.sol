@@ -1,16 +1,6 @@
 pragma solidity ^0.5.7;
 
 interface ISwaps {
-    event OrderCreated(
-        bytes32 id,
-        address indexed owner,
-        address indexed baseAddress,
-        address indexed quoteAddress,
-        uint baseLimit,
-        uint quoteLimit,
-        uint expirationTimestamp
-    );
-
     function createOrder(
         address _baseAddress,
         address _quoteAddress,
@@ -18,4 +8,14 @@ interface ISwaps {
         uint _quoteLimit,
         uint _expirationTimestamp
     ) external;
+
+    function deposit(
+        bytes32 _id,
+        address _token,
+        uint _amount
+    ) payable external;
+
+    function cancel(bytes32 _id) external;
+
+    function refund(bytes32 _id, address _token) external;
 }
