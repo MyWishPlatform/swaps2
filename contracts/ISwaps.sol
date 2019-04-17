@@ -6,7 +6,10 @@ interface ISwaps {
         address _quoteAddress,
         uint _baseLimit,
         uint _quoteLimit,
-        uint _expirationTimestamp
+        uint _expirationTimestamp,
+        address _baseOnlyInvestor,
+        uint _minBaseInvestment,
+        uint _minQuoteInvestment
     ) external;
 
     function deposit(
