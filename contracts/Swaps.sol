@@ -48,7 +48,10 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         address indexed quoteAddress,
         uint baseLimit,
         uint quoteLimit,
-        uint expirationTimestamp
+        uint expirationTimestamp,
+        address baseOnlyInvestor,
+        uint minBaseInvestment,
+        uint minQuoteInvestment
     );
 
     event Cancel(bytes32 id);
@@ -121,7 +124,10 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
             _quoteAddress,
             _baseLimit,
             _quoteLimit,
-            _expirationTimestamp
+            _expirationTimestamp,
+            _baseOnlyInvestor,
+            _minBaseInvestment,
+            _minQuoteInvestment
         );
     }
 
