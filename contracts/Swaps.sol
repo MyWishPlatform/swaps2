@@ -54,7 +54,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         uint minQuoteInvestment
     );
 
-    event Cancel(bytes32 id);
+    event OrderCancelled(bytes32 id);
 
     event Deposit(
         bytes32 id,
@@ -71,7 +71,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         uint amount
     );
 
-    event Swap(
+    event OrderSwapped(
         bytes32 id,
         address indexed byUser
     );
@@ -173,7 +173,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         }
 
         isCancelled[_id] = true;
-        emit Cancel(_id);
+        emit OrderCancelled(_id);
     }
 
     function refund(bytes32 _id, address _token)
@@ -307,7 +307,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         _distribute(_id, quoteAddresses[_id], baseAddresses[_id]);
 
         isSwapped[_id] = true;
-        emit Swap(_id, msg.sender);
+        emit OrderSwapped(_id, msg.sender);
     }
 
     function _distribute(bytes32 _id, address _aSide, address _bSide) internal {
