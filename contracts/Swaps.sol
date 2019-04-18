@@ -347,11 +347,13 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
     ) internal {
         uint amount = _amount;
         require(baseAddresses[_id] == _token || quoteAddresses[_id] == _token, "You can deposit only base or quote currency");
-        require(_amount >= minInvestments[_id][_token], "Should not be less than minimum value");
         require(raised[_id][_token] < limits[_id][_token], "Limit already reached");
         require(now <= expirationTimestamps[_id], "Contract expired");
         if (baseAddresses[_id] == _token && baseOnlyInvestor[_id] != address(0)) {
             require(msg.sender == baseOnlyInvestor[_id], "Allowed only for specified address");
+        }
+        if (limits[_id][_token].sub(raised[_id][_token]) > minInvestments[_id][_token]) {
+            require(_amount >= minInvestments[_id][_token], "Should not be less than minimum value");
         }
 
         if (!_isInvestor(_id, _token, _from)) {
