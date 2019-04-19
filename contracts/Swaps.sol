@@ -43,9 +43,9 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
 
     event OrderCreated(
         bytes32 id,
-        address indexed owner,
-        address indexed baseAddress,
-        address indexed quoteAddress,
+        address owner,
+        address baseAddress,
+        address quoteAddress,
         uint baseLimit,
         uint quoteLimit,
         uint expirationTimestamp,
