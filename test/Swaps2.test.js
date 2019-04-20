@@ -75,7 +75,7 @@ contract("Swaps2", ([owner, ...accounts]) => {
 
     await swaps.createOrder(
       id,
-      baseToken.address,
+      ZERO_ADDRESS,
       quoteToken.address,
       baseLimit,
       quoteLimit,
@@ -86,9 +86,7 @@ contract("Swaps2", ([owner, ...accounts]) => {
       { from: accounts[0] }
     );
 
-    console.info(id);
-
-    await depositToken(swaps, id, baseToken, ether('1'), accounts[1]);
+    await swaps.deposit(id, ZERO_ADDRESS, ether('1'), { from: accounts[1], value: ether('1') });
     await depositToken(swaps, id, quoteToken, ether('2'), accounts[2]);
   });
 });

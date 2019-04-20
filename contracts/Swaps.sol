@@ -37,7 +37,12 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
     }
 
     modifier onlyOrderOwner(bytes32 _id) {
-        require(msg.sender == owners[_id]);
+        require(msg.sender == owners[_id], "Allowed only for owner");
+        _;
+    }
+
+    modifier onlyWhenOrderExists(bytes32 _id) {
+        require(owners[_id] != address(0), "Order doesn't exist");
         _;
     }
 
@@ -58,28 +63,28 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
 
     event Deposit(
         bytes32 id,
-        address indexed token,
-        address indexed user,
+        address token,
+        address user,
         uint amount,
         uint balance
     );
 
     event Refund(
         bytes32 id,
-        address indexed token,
-        address indexed user,
+        address token,
+        address user,
         uint amount
     );
 
     event OrderSwapped(
         bytes32 id,
-        address indexed byUser
+        address byUser
     );
 
     event SwapSend(
         bytes32 id,
-        address indexed token,
-        address indexed user,
+        address token,
+        address user,
         uint amount
     );
 
@@ -140,6 +145,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         external
         nonReentrant
         onlyWhenVaultDefined
+        onlyWhenOrderExists(_id)
     {
         if (_token == address(0)) {
             require(msg.value == _amount, "Payable value should be equals value");
@@ -158,6 +164,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         nonReentrant
         onlyOrderOwner(_id)
         onlyWhenVaultDefined
+        onlyWhenOrderExists(_id)
     {
         require(!isCancelled[_id], "Already cancelled");
         require(!isSwapped[_id], "Already swapped");
@@ -181,6 +188,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         nonReentrant
         onlyInvestor(_id, _token)
         onlyWhenVaultDefined
+        onlyWhenOrderExists(_id)
     {
         require(!isSwapped[_id], "Already swapped");
         address user = msg.sender;
