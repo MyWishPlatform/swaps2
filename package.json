@@ -3,13 +3,22 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "compile": "truffle compile",
-    "test": "truffle test"
+    "compile": "./scripts/compile.sh",
+    "test": "truffle test",
+    "migrate": "truffle migrate --network ropsten"
   },
   "repository": "https://github.com/MyWishPlatform/swaps2.git",
   "author": "Nikolay Toporkov <kolya_t@mywish.io>",
   "license": "MIT",
   "devDependencies": {
-    "truffle": "^5.0.12"
+    "chai": "^4.2.0",
+    "ganache-core": "^2.5.5",
+    "openzeppelin-test-helpers": "^0.3.2",
+    "truffle": "^5.0.12",
+    "truffle-hdwallet-provider-privkey": "^0.3.0"
+  },
+  "dependencies": {
+    "openzeppelin-solidity": "^2.2.0",
+    "sc-library": "github:MyWishPlatform/sc-library#0.7.1"
   }
 }
