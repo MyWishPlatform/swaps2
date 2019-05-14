@@ -13,18 +13,38 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
     uint public MAX_INVESTORS = 10;
 
     Vault public vault;
+    //      id         whiteAddr
     mapping (bytes32 => address) public baseOnlyInvestor;
+    //      id         owner
     mapping (bytes32 => address) public owners;
+    //      id         baseAddr
     mapping (bytes32 => address) public baseAddresses;
+    //      id         quoteAddr
     mapping (bytes32 => address) public quoteAddresses;
+    //      id         expire
     mapping (bytes32 => uint) public expirationTimestamps;
+    //      id         swapped?
     mapping (bytes32 => bool) public isSwapped;
+    //      id         cancelled?
     mapping (bytes32 => bool) public isCancelled;
+    //       id                 base/quote  limit
     mapping (bytes32 => mapping (address => uint)) public limits;
+    //       id                 base/quote  raised
     mapping (bytes32 => mapping (address => uint)) public raised;
+    //       id                 base/quote  investors
     mapping (bytes32 => mapping (address => address[])) public investors;
+    //       id                 base/quote          investor    amount
     mapping (bytes32 => mapping (address => mapping (address => uint))) public investments;
+    //       id                 base/quote  minLimit
     mapping (bytes32 => mapping (address => uint)) public minInvestments;
+    //       id         brokers
+    mapping (bytes32 => address[]) brokers;
+    //       id                 base/quote         broker      percent
+    mapping (bytes32 => mapping (address => mapping(address => uint))) public brokerPercents;
+
+    uint public myWishBasePercent;
+    uint public myWishQuotePercent;
+    address public myWishAddress;
 
     modifier onlyInvestor(bytes32 _id, address _token) {
         require(_isInvestor(_id, _token, msg.sender), "Allowed only for investors");
@@ -56,7 +76,13 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         uint expirationTimestamp,
         address baseOnlyInvestor,
         uint minBaseInvestment,
-        uint minQuoteInvestment
+        uint minQuoteInvestment,
+        address broker,
+        uint brokerBasePercent,
+        uint brokerQuotePercent,
+        address myWish,
+        uint myWishBasePercent,
+        uint myWishQuotePercent
     );
 
     event OrderCancelled(bytes32 id);
@@ -88,6 +114,13 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         uint amount
     );
 
+    event BrokerSend(
+        bytes32 id,
+        address token,
+        address broker,
+        uint amount
+    );
+
     function tokenFallback(address, uint, bytes calldata) external {
     }
 
@@ -100,7 +133,10 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         uint _expirationTimestamp,
         address _baseOnlyInvestor,
         uint _minBaseInvestment,
-        uint _minQuoteInvestment
+        uint _minQuoteInvestment,
+        address _brokerAddress,
+        uint _brokerBasePercent,
+        uint _brokerQuotePercent
     )
         external
         nonReentrant
@@ -111,6 +147,8 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         require(_baseLimit > 0, "Base limit must be positive");
         require(_quoteLimit > 0, "Quote limit must be positive");
         require(_expirationTimestamp > now, "Expiration time must be in future");
+        require(_brokerBasePercent.add(myWishBasePercent) <= 10000, "Base percent sum should be less than 100%");
+        require(_brokerQuotePercent.add(myWishQuotePercent) <= 10000, "Quote percent sum should be less than 100%");
 
         owners[_id] = msg.sender;
         baseAddresses[_id] = _baseAddress;
@@ -121,6 +159,16 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         baseOnlyInvestor[_id] = _baseOnlyInvestor;
         minInvestments[_id][_baseAddress] = _minBaseInvestment;
         minInvestments[_id][_quoteAddress] = _minQuoteInvestment;
+        if (_brokerAddress != address(0)) {
+            brokers[_id].push(_brokerAddress);
+            brokerPercents[_id][_baseAddress][_brokerAddress] = _brokerBasePercent;
+            brokerPercents[_id][_quoteAddress][_brokerAddress] = _brokerQuotePercent;
+        }
+        if (myWishAddress != address(0)) {
+            brokers[_id].push(myWishAddress);
+            brokerPercents[_id][_baseAddress][myWishAddress] = myWishBasePercent;
+            brokerPercents[_id][_quoteAddress][myWishAddress] = myWishQuotePercent;
+        }
 
         emit OrderCreated(
             _id,
@@ -132,7 +180,13 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
             _expirationTimestamp,
             _baseOnlyInvestor,
             _minBaseInvestment,
-            _minQuoteInvestment
+            _minQuoteInvestment,
+            _brokerAddress,
+            _brokerBasePercent,
+            _brokerQuotePercent,
+            myWishAddress,
+            myWishBasePercent,
+            myWishQuotePercent
         );
     }
 
@@ -209,6 +263,18 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
 
     function setVault(Vault _vault) external onlyOwner {
         vault = _vault;
+    }
+
+    function setMyWishPercents(uint _basePercent, uint _quotePercent) external onlyOwner {
+        require(_basePercent <= 10000, "Base percent should be less than 100%");
+        require(_quotePercent <= 10000, "Quote percent should be less than 100%");
+
+        myWishBasePercent = _basePercent;
+        myWishQuotePercent = _quotePercent;
+    }
+
+    function setMyWishAddress(address _myWishAddress) external onlyOwner {
+        myWishAddress = _myWishAddress;
     }
 
     function createKey(address _owner)
@@ -319,7 +385,18 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
     }
 
     function _distribute(bytes32 _id, address _aSide, address _bSide) internal {
-        uint remainder = raised[_id][_bSide];
+        uint brokersPercent;
+        address[] storage orderBrokers = brokers[_id];
+        for (uint i = 0; i < orderBrokers.length; i++) {
+            address broker = orderBrokers[i];
+            uint percent = brokerPercents[_id][_bSide][broker];
+            brokersPercent = brokersPercent.add(percent);
+        }
+
+        uint toPayBrokers = raised[_id][_bSide].mul(brokersPercent).div(10000);
+        uint toPayInvestors = raised[_id][_bSide].sub(toPayBrokers);
+
+        uint remainder = toPayInvestors;
         for (uint i = 0; i < investors[_id][_aSide].length; i++) {
             address user = investors[_id][_aSide][i];
             uint toPay;
@@ -329,13 +406,29 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
             } else {
                 uint aSideRaised = raised[_id][_aSide];
                 uint userInvestment = investments[_id][_aSide][user];
-                uint bSideRaised = raised[_id][_bSide];
-                toPay = userInvestment.mul(bSideRaised).div(aSideRaised);
+                toPay = userInvestment.mul(toPayInvestors).div(aSideRaised);
                 remainder = remainder.sub(toPay);
             }
 
             vault.withdraw(_bSide, user, toPay);
             emit SwapSend(_id, _bSide, user, toPay);
+        }
+
+        remainder = toPayBrokers;
+        for (uint i = 0; i < orderBrokers.length; i++) {
+            address broker = orderBrokers[i];
+            uint toPay;
+            if (i + 1 == orderBrokers.length) {
+                toPay = remainder;
+            } else {
+                uint aSideRaised = raised[_id][_aSide];
+                uint userInvestment = investments[_id][_aSide][broker];
+                toPay = userInvestment.mul(toPayBrokers).div(aSideRaised);
+                remainder = remainder.sub(toPay);
+            }
+
+            vault.withdraw(_bSide, broker, toPay);
+            emit BrokerSend(_id, _bSide, broker, toPay);
         }
     }
 

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "compile": "./scripts/compile.sh",
+    "compile": "truffle compile",
     "test": "truffle test",
     "migrate": "truffle migrate --network ropsten"
   },
