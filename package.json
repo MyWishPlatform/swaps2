@@ -5,15 +5,19 @@
   "scripts": {
     "compile": "truffle compile",
     "test": "truffle test",
-    "migrate": "truffle migrate --network ropsten"
+    "migrate": "truffle migrate --network ropsten",
+    "prettier": "prettier --write **/*.js **/*.sol"
   },
   "repository": "https://github.com/MyWishPlatform/swaps2.git",
   "author": "Nikolay Toporkov <kolya_t@mywish.io>",
   "license": "MIT",
   "devDependencies": {
+    "bn-chai": "^1.0.1",
     "chai": "^4.2.0",
     "ganache-core": "^2.5.5",
     "openzeppelin-test-helpers": "^0.3.2",
+    "prettier": "^1.17.1",
+    "prettier-plugin-solidity": "^1.0.0-alpha.22",
     "truffle": "^5.0.12",
     "truffle-hdwallet-provider-privkey": "^0.3.0"
   },

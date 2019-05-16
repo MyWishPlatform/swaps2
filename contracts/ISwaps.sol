@@ -10,14 +10,15 @@ interface ISwaps {
         uint _expirationTimestamp,
         address _baseOnlyInvestor,
         uint _minBaseInvestment,
-        uint _minQuoteInvestment
+        uint _minQuoteInvestment,
+        address _brokerAddress,
+        uint _brokerBasePercent,
+        uint _brokerQuotePercent
     ) external;
 
-    function deposit(
-        bytes32 _id,
-        address _token,
-        uint _amount
-    ) payable external;
+    function deposit(bytes32 _id, address _token, uint _amount)
+        external
+        payable;
 
     function cancel(bytes32 _id) external;
 
