@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "compile": "truffle compile",
-    "test": "truffle test",
+    "test": "truffle test --network ganache",
     "migrate": "truffle migrate --network ropsten",
     "prettier": "prettier --write **/*.js **/*.sol"
   },
@@ -12,8 +12,9 @@
   "author": "Nikolay Toporkov <kolya_t@mywish.io>",
   "license": "MIT",
   "devDependencies": {
-    "bn-chai": "^1.0.1",
     "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "chai-bn": "^0.1.1",
     "ganache-core": "^2.5.5",
     "openzeppelin-test-helpers": "^0.3.2",
     "prettier": "^1.17.1",
@@ -22,7 +23,7 @@
     "truffle-hdwallet-provider-privkey": "^0.3.0"
   },
   "dependencies": {
-    "openzeppelin-solidity": "^2.2.0",
+    "openzeppelin-solidity": "2.2.0",
     "sc-library": "github:MyWishPlatform/sc-library#0.7.1"
   }
 }

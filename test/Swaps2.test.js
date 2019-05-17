@@ -10,8 +10,9 @@ const {
 } = require("openzeppelin-test-helpers");
 
 const chai = require("chai");
-const { expect } = chai;
-chai.use(require("bn-chai")(BN));
+chai.should();
+chai.use(require("chai-bn")(BN));
+chai.use(require("chai-as-promised"));
 
 const Vault = artifacts.require("Vault");
 const Swaps = artifacts.require("Swaps");
@@ -125,7 +126,7 @@ contract("Swaps2", ([owner, myWish, broker, orderOwner, ...accounts]) => {
       quoteToken.address,
       baseLimit,
       quoteLimit,
-      now.add(duration.minutes("1")),
+      now.add(duration.minutes(new BN("1"))),
       ZERO_ADDRESS,
       ether("0"),
       ether("0"),
@@ -135,34 +136,72 @@ contract("Swaps2", ([owner, myWish, broker, orderOwner, ...accounts]) => {
       { from: orderOwner }
     );
 
-    await depositToken(swaps, id, baseToken, baseLimit, accounts[1]);
-    await depositToken(swaps, id, quoteToken, quoteLimit, accounts[2]);
+    const baseAmounts = [];
+    baseAmounts.push(baseLimit.div(new BN("3")));
+    baseAmounts.push(baseLimit.sub(baseAmounts[0]));
+    for (let i = 0; i < baseAmounts.length; i++) {
+      await depositToken(swaps, id, baseToken, baseAmounts[i], accounts[i + 1]);
+    }
+
+    const quoteAmounts = [];
+    quoteAmounts.push(quoteLimit.div(new BN("5")));
+    quoteAmounts.push(quoteLimit.sub(quoteAmounts[0]));
+    for (let i = 0; i < quoteAmounts.length; i++) {
+      await depositToken(
+        swaps,
+        id,
+        quoteToken,
+        quoteAmounts[i],
+        accounts[i + 1 + baseAmounts.length]
+      );
+    }
 
     const myWishBaseToReceive = baseLimit
       .mul(myWishBasePercent)
       .div(MAX_PERCENT);
-    expect(await baseToken.balanceOf(myWish)).to.eq.BN(myWishBaseToReceive);
+    await baseToken
+      .balanceOf(myWish)
+      .should.eventually.be.bignumber.equal(myWishBaseToReceive);
 
     const myWishQuoteToReceive = quoteLimit
       .mul(myWishQuotePercent)
       .div(MAX_PERCENT);
-    expect(await quoteToken.balanceOf(myWish)).to.eq.BN(myWishQuoteToReceive);
+    await quoteToken
+      .balanceOf(myWish)
+      .should.eventually.be.bignumber.equal(myWishQuoteToReceive);
 
-    let investorBaseToReceive = MAX_PERCENT.sub(myWishBasePercent)
-      .sub(brokerBasePercent)
-      .mul(baseLimit)
+    const brokerBaseToReceive = baseLimit
+      .mul(brokerBasePercent)
       .div(MAX_PERCENT);
+    await baseToken
+      .balanceOf(broker)
+      .should.eventually.be.bignumber.equal(brokerBaseToReceive);
 
-    expect(await baseToken.balanceOf(accounts[2])).to.eq.BN(
-      investorBaseToReceive
-    );
-
-    const investorQuoteToReceive = MAX_PERCENT.sub(myWishQuotePercent)
-      .sub(brokerQuotePercent)
-      .mul(quoteLimit)
+    const brokerQuoteToReceive = quoteLimit
+      .mul(brokerQuotePercent)
       .div(MAX_PERCENT);
-    expect(await quoteToken.balanceOf(accounts[1])).to.eq.BN(
-      investorQuoteToReceive
-    );
+    await quoteToken
+      .balanceOf(broker)
+      .should.eventually.be.bignumber.equal(brokerQuoteToReceive);
+
+    for (let i = 0; i < baseAmounts.length; i++) {
+      const investorQuoteToReceive = baseAmounts[i]
+        .mul(quoteLimit.sub(myWishQuoteToReceive).sub(brokerQuoteToReceive))
+        .div(baseLimit);
+
+      await quoteToken
+        .balanceOf(accounts[i + 1])
+        .should.eventually.be.bignumber.closeTo(investorQuoteToReceive, "1");
+    }
+
+    for (let i = 0; i < quoteAmounts.length; i++) {
+      const investorBaseToReceive = quoteAmounts[i]
+        .mul(baseLimit.sub(myWishBaseToReceive).sub(brokerBaseToReceive))
+        .div(quoteLimit);
+
+      await baseToken
+        .balanceOf(accounts[i + 1 + baseAmounts.length])
+        .should.eventually.be.bignumber.closeTo(investorBaseToReceive, "1");
+    }
   });
 });
