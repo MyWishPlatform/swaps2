@@ -11,7 +11,7 @@ const {
 
 const chai = require("chai");
 const { expect } = chai;
-chai.use(require("bn-chai")(web3.utils.BN));
+chai.use(require("bn-chai")(BN));
 
 const Vault = artifacts.require("Vault");
 const Swaps = artifacts.require("Swaps");
@@ -26,6 +26,7 @@ contract("Swaps2", ([owner, myWish, broker, orderOwner, ...accounts]) => {
   let quoteToken;
   let baseLimit = ether("1");
   let quoteLimit = ether("2");
+  const MAX_PERCENT = new BN("10000");
 
   async function depositToken(swaps, id, token, amount, from) {
     await token.mint(from, amount);
@@ -107,11 +108,11 @@ contract("Swaps2", ([owner, myWish, broker, orderOwner, ...accounts]) => {
   });
 
   it("deposit to order with broker and mywish and check distribution", async () => {
-    const myWishBasePercent = 50;
-    const myWishQuotePercent = 70;
+    const myWishBasePercent = new BN("50");
+    const myWishQuotePercent = new BN("70");
     const id = await swaps.createKey(accounts[0]);
-    const brokerBasePercent = 100;
-    const brokerQuotePercent = 250;
+    const brokerBasePercent = new BN("100");
+    const brokerQuotePercent = new BN("250");
 
     await swaps.setMyWishAddress(myWish, { from: owner });
     await swaps.setMyWishPercents(myWishBasePercent, myWishQuotePercent, {
@@ -137,12 +138,31 @@ contract("Swaps2", ([owner, myWish, broker, orderOwner, ...accounts]) => {
     await depositToken(swaps, id, baseToken, baseLimit, accounts[1]);
     await depositToken(swaps, id, quoteToken, quoteLimit, accounts[2]);
 
-    const myWishBaseToReceive = Math.floor(
-      (baseLimit * myWishBasePercent) / 10000
-    );
+    const myWishBaseToReceive = baseLimit
+      .mul(myWishBasePercent)
+      .div(MAX_PERCENT);
     expect(await baseToken.balanceOf(myWish)).to.eq.BN(myWishBaseToReceive);
 
-    // const myWishQuoteToReceive = Math.floor(quoteLimit * myWishQuotePercent / 10000);
-    // expect(await quoteToken.balanceOf(myWish)).to.eq.BN(myWishQuoteToReceive);
+    const myWishQuoteToReceive = quoteLimit
+      .mul(myWishQuotePercent)
+      .div(MAX_PERCENT);
+    expect(await quoteToken.balanceOf(myWish)).to.eq.BN(myWishQuoteToReceive);
+
+    let investorBaseToReceive = MAX_PERCENT.sub(myWishBasePercent)
+      .sub(brokerBasePercent)
+      .mul(baseLimit)
+      .div(MAX_PERCENT);
+
+    expect(await baseToken.balanceOf(accounts[2])).to.eq.BN(
+      investorBaseToReceive
+    );
+
+    const investorQuoteToReceive = MAX_PERCENT.sub(myWishQuotePercent)
+      .sub(brokerQuotePercent)
+      .mul(quoteLimit)
+      .div(MAX_PERCENT);
+    expect(await quoteToken.balanceOf(accounts[1])).to.eq.BN(
+      investorQuoteToReceive
+    );
   });
 });

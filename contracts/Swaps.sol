@@ -409,9 +409,8 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
             if (i + 1 == brokers[_id].length) {
                 toPay = remainder;
             } else {
-                uint aSideRaised = raised[_id][_aSide];
-                uint userInvestment = investments[_id][_aSide][broker];
-                toPay = userInvestment.mul(toPayBrokers).div(aSideRaised);
+                uint percent = brokerPercents[_id][_bSide][broker];
+                toPay = toPayBrokers.mul(percent).div(brokersPercent);
                 remainder = remainder.sub(toPay);
             }
 
