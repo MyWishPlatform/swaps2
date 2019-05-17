@@ -11,17 +11,18 @@ contract Vault is Ownable {
         _;
     }
 
-    function () external payable {
-    }
+    function() external payable {}
 
-    function tokenFallback(address, uint, bytes calldata) external {
-    }
+    function tokenFallback(address, uint, bytes calldata) external {}
 
     function setSwaps(address _swaps) public onlyOwner {
         swaps = _swaps;
     }
 
-    function withdraw(address _token, address _receiver, uint _amount) public onlySwaps {
+    function withdraw(address _token, address _receiver, uint _amount)
+        public
+        onlySwaps
+    {
         if (_token == address(0)) {
             address(uint160(_receiver)).transfer(_amount);
         } else {
