@@ -303,6 +303,14 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         }
     }
 
+    function allBrokersBasePercent(bytes32 _id) public view returns (uint) {
+        return _allBrokersPercent(baseAddresses[_id], _id);
+    }
+
+    function allBrokersQuotePercent(bytes32 _id) public view returns (uint) {
+        return _allBrokersPercent(quoteAddresses[_id], _id);
+    }
+
     function baseLimit(bytes32 _id) public view returns (uint) {
         return limits[_id][baseAddresses[_id]];
     }
@@ -357,6 +365,17 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
 
     function orderBrokers(bytes32 _id) public view returns (address[] memory) {
         return brokers[_id];
+    }
+
+    function _allBrokersPercent(address _side, bytes32 _id) internal view returns (uint) {
+        uint percents;
+
+        for (uint i = 0; i < brokers[_id].length; i++) {
+            address broker = brokers[_id][i];
+            uint percent = brokerPercents[_id][_side][broker];
+            percents = percents.add(percent);
+        }
+        return percents;
     }
 
     function _swap(bytes32 _id) internal {
