@@ -1,10 +1,9 @@
 const {
-  balance,
   BN,
   constants: { ZERO_ADDRESS },
   ether,
   expectEvent,
-  shouldFail,
+  expectRevert,
   time,
   time: { duration }
 } = require("openzeppelin-test-helpers");
@@ -369,7 +368,7 @@ contract("Swaps2", ([owner, myWish, broker, orderOwner, ...accounts]) => {
   });
 
   it("should fail with same addresses", async () => {
-    await shouldFail(
+    await expectRevert.unspecified(
       swaps.createOrder(
         await swaps.createKey(accounts[0]),
         ZERO_ADDRESS,
@@ -386,7 +385,7 @@ contract("Swaps2", ([owner, myWish, broker, orderOwner, ...accounts]) => {
       )
     );
 
-    await shouldFail(
+    await expectRevert.unspecified(
       swaps.createOrder(
         await swaps.createKey(accounts[1]),
         accounts[0],
@@ -405,7 +404,7 @@ contract("Swaps2", ([owner, myWish, broker, orderOwner, ...accounts]) => {
   });
 
   it("should fail expiration date in past", async () => {
-    await shouldFail(
+    await expectRevert.unspecified(
       swaps.createOrder(
         await swaps.createKey(accounts[0]),
         accounts[0],
