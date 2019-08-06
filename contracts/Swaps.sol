@@ -247,6 +247,7 @@ contract Swaps is Ownable, ISwaps, ReentrancyGuard {
         onlyWhenVaultDefined
         onlyWhenOrderExists(_id)
     {
+        require(!isCancelled[_id], "Order cancelled");
         require(!isSwapped[_id], "Already swapped");
         address user = msg.sender;
         uint investment = investments[_id][_token][user];
